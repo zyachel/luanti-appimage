@@ -1,0 +1,87 @@
+version: 1
+
+AppDir:
+  path: AppDir
+  app_info:
+    id: net.minetest.minetest
+    name: Luanti
+    icon: luanti
+    version: latest
+    exec: usr/bin/luanti
+    exec_args: $@
+  files:
+    include: []
+    exclude:
+      - usr/share/man
+      - usr/share/doc
+      - usr/share/lintian
+  apt:
+    arch: amd64
+    allow_unauthenticated: true
+    sources:
+      - sourceline: deb http://azure.archive.ubuntu.com/ubuntu/ jammy main restricted
+      - sourceline: deb http://azure.archive.ubuntu.com/ubuntu/ jammy universe
+      - sourceline: deb http://azure.archive.ubuntu.com/ubuntu/ jammy multiverse
+      - sourceline: deb http://azure.archive.ubuntu.com/ubuntu/ jammy-updates main restricted
+      - sourceline: deb http://azure.archive.ubuntu.com/ubuntu/ jammy-updates universe
+      - sourceline: deb http://azure.archive.ubuntu.com/ubuntu/ jammy-updates multiverse
+      - sourceline: deb http://azure.archive.ubuntu.com/ubuntu/ jammy-backports main restricted universe multiverse
+      - sourceline: deb http://azure.archive.ubuntu.com/ubuntu/ jammy-security main restricted
+      - sourceline: deb http://azure.archive.ubuntu.com/ubuntu/ jammy-security universe
+      - sourceline: deb http://azure.archive.ubuntu.com/ubuntu/ jammy-security multiverse
+    include:
+      - libasound2
+      - libbrotli1
+      - libbsd0
+      - libc6
+      - libcom-err2
+      - libcurl4-gnutls-dev
+      - libffi8
+      - libfreetype6
+      - libgcc-s1
+      - libgl1
+      - libgmp10
+      - libgnutls30
+      - libgssapi-krb5-2
+      - libhogweed6
+      - libidn2-0
+      - libjpeg8
+      - libjsoncpp25
+      - libk5crypto3
+      - libkeyutils1
+      - libkrb5-3
+      - libkrb5support0
+      - libldap-2.5-0
+      - libluajit-5.1-2
+      - libmd0
+      - libncursesw6
+      - libnettle8
+      - libnghttp2-14
+      - libogg0
+      - libopenal1
+      - libp11-kit0
+      - libpng16-16
+      - libpsl5
+      - librtmp1
+      - libsasl2-2
+      - libsndio7.0
+      - libsqlite3-0
+      - libstdc++6
+      - libtasn1-6
+      - libtinfo6
+      - libunistring2
+      - libvorbis0a
+      - libvorbisfile3
+      - libx11-6
+      - libxau6
+      - libxcb1
+      - libxdmcp6
+      - libxext6
+      - libxi6
+      - libzstd1
+      - zlib1g
+
+AppImage:
+  update-information: guess
+  sign-key: None
+  arch: x86_64

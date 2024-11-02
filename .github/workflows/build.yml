@@ -1,0 +1,147 @@
+name: Build Luanti AppImage
+
+on:
+  push:
+    branches:
+      - trunk
+  schedule:
+    - cron: '0 22 1/2 * *' # every other day at midnight
+  workflow_dispatch:
+env:
+  LUANTI_REPO: minetest/minetest
+  LUANTI_DIR: luanti
+  TOOLS_DIR: tools
+  FINAL_BUILD_DIR: final-build
+  APPIMAGE_DEST: AppDir
+  DEPENDENCIES: |
+    build-essential \
+    cmake \
+    libpng-dev \
+    libjpeg-dev \
+    libxi-dev \
+    libgl1-mesa-dev \
+    libsqlite3-dev \
+    libogg-dev \
+    libvorbis-dev \
+    libopenal-dev \
+    libcurl4-gnutls-dev \
+    libfreetype6-dev \
+    zlib1g-dev \
+    libgmp-dev \
+    libjsoncpp-dev \
+    libzstd-dev \
+    libluajit-5.1-dev \
+    gettext \
+    git \
+    libfuse2 \
+    jq
+
+jobs:
+  check-new-release:
+    runs-on: ubuntu-22.04
+    outputs:
+      SHOULD_BUILD: ${{steps.get-release.outputs.SHOULD_BUILD}}
+      CURRENT_VERSION: ${{steps.get-release.outputs.CURRENT_VERSION}}
+      LATEST_VERSION: ${{steps.get-release.outputs.LATEST_VERSION}}
+    steps:
+      - name: Checkout code
+        uses: 'actions/checkout@v4'
+
+      - name: Get latest Luanti release version
+        id: get-release
+        run: |
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/${{ env.LUANTI_REPO }}/releases/latest | jq -r .tag_name)
+          echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
+
+          if [ -f current_version.txt ]; then
+            CURRENT_VERSION=$(cat current_version.txt)
+          else
+            CURRENT_VERSION=""
+          fi
+
+          echo "Current version: ${CURRENT_VERSION}"
+          echo "Latest version: ${LATEST_VERSION}"
+
+          if [ "$LATEST_VERSION" != "$CURRENT_VERSION" ]; then
+            echo "New release found: ${LATEST_VERSION}"
+            echo "SHOULD_BUILD=true" >> $GITHUB_OUTPUT
+            echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_OUTPUT
+            echo "CURRENT_VERSION=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+          else
+            echo "No new release found."
+            echo "SHOULD_BUILD=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    runs-on: ubuntu-22.04
+    needs: check-new-release
+    if: "${{needs.check-new-release.outputs.SHOULD_BUILD == 'true'}}"
+    permissions:
+      contents: write
+    steps:
+      - name: Add versions to env
+        run: |
+          echo "CURRENT_VERSION=${{needs.check-new-release.outputs.CURRENT_VERSION}}" >> $GITHUB_ENV
+          echo "LATEST_VERSION=${{needs.check-new-release.outputs.LATEST_VERSION}}" >> $GITHUB_ENV
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Checkout Luanti source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.LUANTI_REPO }}
+          path: ${{ env.LUANTI_DIR }}
+
+      - name: Install system dependencies
+        run: |
+          set -e
+          sudo apt-get update
+          sudo apt-get install -y ${{ env.DEPENDENCIES }}
+
+      - name: Download appimage-builder
+        if: steps.cache-tools-restore.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ${{ env.TOOLS_DIR }}
+          cd ${{ env.TOOLS_DIR }}
+          wget -O appimage-builder.AppImage https://github.com/AppImageCrafters/appimage-builder/releases/download/v1.1.0/appimage-builder-1.1.0-x86_64.AppImage
+          chmod +x appimage-builder.AppImage
+
+      - name: Build Luanti
+        if: steps.cache-minetest-restore.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          cd ${{ env.LUANTI_DIR }}
+          cmake -B ${{ env.FINAL_BUILD_DIR }} -DENABLE_REDIS=FALSE -DENABLE_POSTGRESQL=OFF -DCMAKE_INSTALL_PREFIX=${{ env.APPIMAGE_DEST }}/usr/ -DBUILD_SERVER=FALSE -DENABLE_GETTEXT=TRUE -DCMAKE_BUILD_TYPE=Release -DRUN_IN_PLACE=FALSE
+          cmake --build ${{ env.FINAL_BUILD_DIR }} --parallel $(nproc) --config Release
+          cmake --install ${{ env.FINAL_BUILD_DIR }}
+
+      - name: Build AppImage
+        run: |
+          ${{ env.TOOLS_DIR }}/appimage-builder.AppImage --appdir ${{ env.LUANTI_DIR }}/${{ env.APPIMAGE_DEST }} --recipe ./AppImageBuilder.yml --build-dir .
+
+      - name: Rename AppImage
+        run: mv Luanti*.AppImage Luanti-${{ env.LATEST_VERSION }}.AppImage
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: Luanti-${{ env.LATEST_VERSION }}
+          path: Luanti-${{ env.LATEST_VERSION }}.AppImage
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.LATEST_VERSION }}
+          files: Luanti-${{ env.LATEST_VERSION }}.AppImage
+          body: |
+            see https://github.com/${{ env.LUANTI_REPO }}/compare/v${{ env.CURRENT_VERSION }}...v${{ env.LATEST_VERSION }} for full diff, or visit https://dev.minetest.net/Changelog for a brief summary.
+
+      - name: Update version file
+        run: echo "${{ env.LATEST_VERSION }}" > current_version.txt
+
+      - name: Commit new version
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          file_pattern: current_version.txt
+          commit_message: 'chore: update to v${{ env.LATEST_VERSION }}'
