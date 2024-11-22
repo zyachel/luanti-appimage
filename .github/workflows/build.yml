@@ -140,7 +140,7 @@ jobs:
           tag_name: ${{ env.LATEST_VERSION }}
           files: Luanti-${{ env.LATEST_VERSION }}.AppImage
           body: |
-            see https://github.com/${{ env.LUANTI_REPO }}/compare/v${{ env.CURRENT_VERSION }}...v${{ env.LATEST_VERSION }} for full diff, or visit https://dev.minetest.net/Changelog for a brief summary.
+            see https://github.com/${{ env.LUANTI_REPO }}/compare/${{ env.CURRENT_VERSION }}...${{ env.LATEST_VERSION }} for full diff, or visit https://dev.minetest.net/Changelog for a brief summary.
 
       - name: Update version file
         run: echo "${{ env.LATEST_VERSION }}" > current_version.txt
@@ -149,4 +149,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           file_pattern: current_version.txt
-          commit_message: 'chore: update to v${{ env.LATEST_VERSION }}'
+          commit_message: 'chore: update to ${{ env.LATEST_VERSION }}'
