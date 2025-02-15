@@ -36,7 +36,7 @@ am update luanti
 ### Manual
 
 1. Go to [the releases page][releases page] and download [the latest release][latest release].
-2. Run the following in your terminal emulator:
+2. Modify and run the following in your terminal emulator:
 
 ```bash
 chmod +x ./path/to/Lunati-<version>.AppImage
@@ -44,7 +44,7 @@ chmod +x ./path/to/Lunati-<version>.AppImage
 
 ## Caveats
 
-- I've only tested this on my machine(Debian trixie), so it may not work on yours. If that's the case, file a new issue and help me fix it.
+- I've only tested this on my machines(Debian trixie, Debian bookworm, and EndeavourOS Neo), so it may not work on yours. If that's the case, file a new issue and help me fix it.
 - File size is bigger by \~5mb compared to [An0n3m0us][anonymous-repo]'s AppImages, as I have added more(almost all output by `ldd`) dependencies.
 
 ## To-Do:

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  LUANTI_REPO: minetest/minetest
+  LUANTI_REPO: luanti-org/luanti
   LUANTI_DIR: luanti
   TOOLS_DIR: tools
   FINAL_BUILD_DIR: final-build
@@ -140,7 +140,7 @@ jobs:
           tag_name: ${{ env.LATEST_VERSION }}
           files: Luanti-${{ env.LATEST_VERSION }}.AppImage
           body: |
-            see https://github.com/${{ env.LUANTI_REPO }}/compare/${{ env.CURRENT_VERSION }}...${{ env.LATEST_VERSION }} for full diff, or visit https://dev.minetest.net/Changelog for a brief summary.
+            see https://github.com/${{ env.LUANTI_REPO }}/compare/${{ env.CURRENT_VERSION }}...${{ env.LATEST_VERSION }} for full diff, or visit https://docs.luanti.org/about/changelog/ for a brief summary.
 
       - name: Update version file
         run: echo "${{ env.LATEST_VERSION }}" > current_version.txt
