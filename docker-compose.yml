@@ -1,0 +1,13 @@
+services:
+  luanti-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        OUTPUT_DIR: output
+        LATEST_VERSION: ${LATEST_VERSION}
+    environment:
+      - LATEST_VERSION=${LATEST_VERSION}
+    working_dir: /workdir
+    volumes:
+      - ./output:/workdir/output

@@ -13,7 +13,7 @@ Also, automating this process would be useful because an AppImage would be creat
 
 ## How
 
-It uses GitHub Actions to first check if there's a new release available. If so, it builds Luanti from source on Ubuntu 22.04. Then using appimage-builder, puts the final binary and all its dependencies into an AppImage(following AppDir specification). And finally creates a new release with the help of some nifty actions.
+It uses GitHub Actions to first check if there's a new release available. If so, it builds Luanti from source on Ubuntu 22.04(using Docker, because we dislike vendor lock-in and also want to be able to test the flow locally), and puts the final binary and all its dependencies into an AppImage(following AppDir specification using linuxdeploy). After that creates a new release with the help of some nifty actions.
 
 ## Installation
 
@@ -24,7 +24,7 @@ It uses GitHub Actions to first check if there's a new release available. If so,
 2. Since this repo isn't in AM's list, you have to add it manually.
 
 ```bash
-   am extra zyachel/luanti-appimage luanti
+am extra zyachel/luanti-appimage luanti
 ```
 
 3. (Optional) To update, simply run the following:
@@ -42,14 +42,26 @@ am update luanti
 chmod +x ./path/to/Lunati-<version>.AppImage
 ```
 
+## Build locally
+
+1. You need docker on your machine.
+
+2. clone this repository, or just copy `Dockerfile`, `docker-compose.yml`, and `build.sh` to a directory.
+
+3. run
+```bash
+export LATEST_VERSION=5.11.0 # replace with your desired version number.
+docker compose up --build
+chmod +x "./output/Luanti-$LATEST_VERSION.AppImage"
+```
+
 ## Caveats
 
-- I've only tested this on my machines(Debian trixie, Debian bookworm, and EndeavourOS Neo), so it may not work on yours. If that's the case, file a new issue and help me fix it.
-- File size is bigger by \~5mb compared to [An0n3m0us][anonymous-repo]'s AppImages, as I have added more(almost all output by `ldd`) dependencies.
+I've only tested this on my machines(Debian trixie, Debian bookworm, and EndeavourOS Neo), so it may not work on yours. If that's the case, file a new issue and help me fix it.
 
-## To-Do:
+## To-Do
 
-- [ ] Try not to add redundant dependencies to the final AppImage.
+- [x] Try not to add redundant dependencies to the final AppImage.
 - [ ] Add support for i386.
 - [ ] Generate a `.deb` alongside.
 - [ ] Test on different machines.
@@ -58,7 +70,8 @@ chmod +x ./path/to/Lunati-<version>.AppImage
 ## Credits
 
 - [An0n3m0us][anonymous-repo]'s initial implementation, especially [this issue by @Lejo1][issue].
-- [appimage-builder][appimage-builder], for their magical tool for creating AppImages.
+- [linuxdeploy][linuxdeploy], for doing the actual packaging. 
+- [appimage-builder][appimage-builder], for their magical tool for creating AppImages, was used prior to current linuxdeploy setup.
 - [localsend]'s workflow.
 - all the GitHub actions that are being used
 - [luanti][luanti], for the game :)
@@ -68,6 +81,7 @@ chmod +x ./path/to/Lunati-<version>.AppImage
 [luanti]: https://www.luanti.org/
 [anonymous-repo]: https://github.com/An0n3m0us/Minetest-AppImages/
 [issue]: https://github.com/An0n3m0us/Minetest-AppImages/issues/3
+[linuxdeploy]: https://github.com/linuxdeploy/linuxdeploy/
 [appimage-builder]: https://appimage-builder.readthedocs.io/
 [localsend]: https://github.com/localsend/localsend/blob/main/.github/workflows/linux_build.yml
 

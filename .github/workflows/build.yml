@@ -1,4 +1,4 @@
-name: Build Luanti AppImage
+name: Build AppImage
 
 on:
   push:
@@ -8,50 +8,21 @@ on:
     - cron: '0 16 * * 5' # what could go wrong on a friday evening ¯\_ (ツ)_/¯
   workflow_dispatch:
 
-env:
-  LUANTI_REPO: luanti-org/luanti
-  LUANTI_DIR: luanti
-  TOOLS_DIR: tools
-  FINAL_BUILD_DIR: final-build
-  APPIMAGE_DEST: AppDir
-  DEPENDENCIES: |
-    build-essential \
-    cmake \
-    libpng-dev \
-    libjpeg-dev \
-    libxi-dev \
-    libgl1-mesa-dev \
-    libsqlite3-dev \
-    libogg-dev \
-    libvorbis-dev \
-    libopenal-dev \
-    libcurl4-gnutls-dev \
-    libfreetype6-dev \
-    zlib1g-dev \
-    libgmp-dev \
-    libjsoncpp-dev \
-    libzstd-dev \
-    libluajit-5.1-dev \
-    gettext \
-    git \
-    libfuse2 \
-    jq
-
 jobs:
   check-new-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
-      SHOULD_BUILD: ${{steps.get-release.outputs.SHOULD_BUILD}}
-      CURRENT_VERSION: ${{steps.get-release.outputs.CURRENT_VERSION}}
-      LATEST_VERSION: ${{steps.get-release.outputs.LATEST_VERSION}}
+      SHOULD_BUILD: ${{ steps.get-release.outputs.SHOULD_BUILD }}
+      CURRENT_VERSION: ${{ steps.get-release.outputs.CURRENT_VERSION }}
+      LATEST_VERSION: ${{ steps.get-release.outputs.LATEST_VERSION }}
     steps:
-      - name: Checkout code
-        uses: 'actions/checkout@v4'
+      - name: Checkout this repository
+        uses: actions/checkout@v4
 
-      - name: Get latest Luanti release version
+      - name: Get Luanti's latest release version
         id: get-release
         run: |
-          LATEST_VERSION=$(curl -s https://api.github.com/repos/${{ env.LUANTI_REPO }}/releases/latest | jq -r .tag_name)
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/luanti-org/luanti/releases/latest | jq -r .tag_name)
           echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
 
           if [ -f current_version.txt ]; then
@@ -79,73 +50,39 @@ jobs:
           fi
 
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: check-new-release
-    if: "${{needs.check-new-release.outputs.SHOULD_BUILD == 'true'}}"
+    if: "${{ needs.check-new-release.outputs.SHOULD_BUILD == 'true' }}"
     permissions:
       contents: write
+    env:
+      LATEST_VERSION: ${{ needs.check-new-release.outputs.LATEST_VERSION }}
+      CURRENT_VERSION: ${{ needs.check-new-release.outputs.CURRENT_VERSION }}
     steps:
-      - name: Add versions to env
-        run: |
-          echo "CURRENT_VERSION=${{needs.check-new-release.outputs.CURRENT_VERSION}}" >> $GITHUB_ENV
-          echo "LATEST_VERSION=${{needs.check-new-release.outputs.LATEST_VERSION}}" >> $GITHUB_ENV
-
-      - name: Checkout source
+      - name: Checkout this repository
         uses: actions/checkout@v4
-
-      - name: Checkout Luanti source
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.LUANTI_REPO }}
-          ref: ${{ env.LATEST_VERSION }}
-          path: ${{ env.LUANTI_DIR }}
-
-      - name: Install system dependencies
-        run: |
-          set -e
-          sudo apt-get update
-          sudo apt-get install -y ${{ env.DEPENDENCIES }}
-
-      - name: Download appimage-builder
-        run: |
-          mkdir -p ${{ env.TOOLS_DIR }}
-          cd ${{ env.TOOLS_DIR }}
-          wget -O appimage-builder.AppImage https://github.com/AppImageCrafters/appimage-builder/releases/download/v1.1.0/appimage-builder-1.1.0-x86_64.AppImage
-          chmod +x appimage-builder.AppImage
-
-      - name: Build Luanti
-        run: |
-          set -e
-          cd ${{ env.LUANTI_DIR }}
-          cmake -B ${{ env.FINAL_BUILD_DIR }} -DENABLE_REDIS=FALSE -DENABLE_POSTGRESQL=OFF -DCMAKE_INSTALL_PREFIX=${{ env.APPIMAGE_DEST }}/usr/ -DBUILD_SERVER=FALSE -DENABLE_GETTEXT=TRUE -DCMAKE_BUILD_TYPE=Release -DRUN_IN_PLACE=FALSE
-          cmake --build ${{ env.FINAL_BUILD_DIR }} --parallel $(nproc) --config Release
-          cmake --install ${{ env.FINAL_BUILD_DIR }}
 
       - name: Build AppImage
-        run: |
-          ${{ env.TOOLS_DIR }}/appimage-builder.AppImage --appdir ${{ env.LUANTI_DIR }}/${{ env.APPIMAGE_DEST }} --recipe ./AppImageBuilder.yml --build-dir .
+        run: docker compose up --build --abort-on-container-exit
 
-      - name: Rename AppImage
-        run: mv Luanti*.AppImage Luanti-${{ env.LATEST_VERSION }}.AppImage
-
-      - name: Upload AppImage
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Luanti-${{ env.LATEST_VERSION }}
-          path: Luanti-${{ env.LATEST_VERSION }}.AppImage
+          path: output/Luanti-${{ env.LATEST_VERSION }}.AppImage
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.LATEST_VERSION }}
-          files: Luanti-${{ env.LATEST_VERSION }}.AppImage
+          files: output/Luanti-${{ env.LATEST_VERSION }}.AppImage
           body: |
-            see https://github.com/${{ env.LUANTI_REPO }}/compare/${{ env.CURRENT_VERSION }}...${{ env.LATEST_VERSION }} for full diff, or visit https://docs.luanti.org/about/changelog/ for a brief summary.
+            See https://github.com/luanti-org/luanti/compare/${{ env.CURRENT_VERSION }}...${{ env.LATEST_VERSION }} for full diff, or visit https://docs.luanti.org/about/changelog/ for a brief summary.
 
       - name: Update version file
         run: echo "${{ env.LATEST_VERSION }}" > current_version.txt
 
-      - name: Commit new version
+      - name: Commit version file
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           file_pattern: current_version.txt
